@@ -1,20 +1,41 @@
 name: x4ax-aws-azure-login
-version: git
+adopt-info: install-x4ax-aws-azure-login
 summary: Use Azure AD SSO to log into the AWS via CLI.
 description: |
   To configure the aws-azure-login client run:-
   $ x4ax-aws-azure-login --configure
   Once x4ax-aws-azure-login is configured, you can log in. For the default profile, just run:-
   $ x4ax-aws-azure-login
-base: core18
+base: core22
 confinement: strict
 
 parts:
-  x4ax-aws-azure-login:
-    plugin: nodejs
-    nodejs-version: "18.12.0"
-    nodejs-package-manager: yarn
-    source: .
+    node:
+        plugin: dump
+        source: https://nodejs.org/dist/v18.12.1/node-v18.12.1-linux-x64.tar.xz
+        stage:
+            - bin
+            - include
+            - lib
+    install-x4ax-aws-azure-login:
+        after: [node]
+        plugin: nil
+        source: .
+        override-pull: |
+          craftctl default
+          git config --global --add safe.directory /root/parts/install-x4ax-aws-azure-login/src
+
+          version="$(git describe --always | sed -e 's/-/+git/;y/-/./')"
+          [ -n "$(echo $version | grep "+git")" ] && grade=devel || grade=stable
+          craftctl set version="$version"
+          craftctl set grade="$grade"
+        override-build: |
+            npm config set unsafe-perm true
+            npm install -g yarn
+            yarn install 
+            yarn build
+            cp -r ./node_modules $SNAPCRAFT_PART_INSTALL
+            cp -a ./lib $SNAPCRAFT_PART_INSTALL
 
 apps:
   x4ax-aws-azure-login:
